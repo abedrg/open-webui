@@ -1,5 +1,6 @@
 <script lang="ts">
 	import Switch from '$lib/components/common/Switch.svelte';
+	import Textarea from '$lib/components/common/Textarea.svelte';
 	import Tooltip from '$lib/components/common/Tooltip.svelte';
 	import Plus from '$lib/components/icons/Plus.svelte';
 	import { getContext } from 'svelte';
@@ -14,6 +15,7 @@
 	const defaultParams = {
 		// Advanced
 		stream_response: null, // Set stream responses for this model individually
+		stream_delta_chunk_size: null, // Set the chunk size for streaming responses
 		function_calling: null,
 		seed: null,
 		stop: null,
@@ -34,6 +36,9 @@
 		repeat_penalty: null,
 		use_mmap: null,
 		use_mlock: null,
+		think: null,
+		format: null,
+		keep_alive: null,
 		num_keep: null,
 		num_ctx: null,
 		num_batch: null,
@@ -84,10 +89,67 @@
 		</Tooltip>
 	</div>
 
+	{#if admin}
+		<div>
+			<Tooltip
+				content={$i18n.t(
+					'The stream delta chunk size for the model. Increasing the chunk size will make the model respond with larger pieces of text at once.'
+				)}
+				placement="top-start"
+				className="inline-tooltip"
+			>
+				<div class="flex w-full justify-between">
+					<div class=" self-center text-xs font-medium">
+						{$i18n.t('Stream Delta Chunk Size')}
+					</div>
+					<button
+						class="p-1 px-3 text-xs flex rounded-sm transition shrink-0 outline-hidden"
+						type="button"
+						on:click={() => {
+							params.stream_delta_chunk_size =
+								(params?.stream_delta_chunk_size ?? null) === null ? 1 : null;
+						}}
+					>
+						{#if (params?.stream_delta_chunk_size ?? null) === null}
+							<span class="ml-2 self-center"> {$i18n.t('Default')} </span>
+						{:else}
+							<span class="ml-2 self-center"> {$i18n.t('Custom')} </span>
+						{/if}
+					</button>
+				</div>
+			</Tooltip>
+
+			{#if (params?.stream_delta_chunk_size ?? null) !== null}
+				<div class="flex mt-0.5 space-x-2">
+					<div class=" flex-1">
+						<input
+							id="steps-range"
+							type="range"
+							min="1"
+							max="128"
+							step="1"
+							bind:value={params.stream_delta_chunk_size}
+							class="w-full h-2 rounded-lg appearance-none cursor-pointer dark:bg-gray-700"
+						/>
+					</div>
+					<div>
+						<input
+							bind:value={params.stream_delta_chunk_size}
+							type="number"
+							class=" bg-transparent text-center w-14"
+							min="1"
+							step="any"
+						/>
+					</div>
+				</div>
+			{/if}
+		</div>
+	{/if}
+
 	<div>
 		<Tooltip
 			content={$i18n.t(
-				'Default mode works with a wider range of models by calling tools once before execution. Native mode leverages the model’s built-in tool-calling capabilities, but requires the model to inherently support this feature.'
+				"Default mode works with a wider range of models by calling tools once before execution. Native mode leverages the model's built-in tool-calling capabilities, but requires the model to inherently support this feature."
 			)}
 			placement="top-start"
 			className="inline-tooltip"
@@ -1040,7 +1102,7 @@
 			{#if (params?.use_mmap ?? null) !== null}
 				<div class="flex justify-between items-center mt-1">
 					<div class="text-xs text-gray-500">
-						{params.use_mmap ? 'Enabled' : 'Disabled'}
+						{params.use_mmap ? $i18n.t('Enabled') : $i18n.t('Disabled')}
 					</div>
 					<div class=" pr-2">
 						<Switch bind:state={params.use_mmap} />
@@ -1081,7 +1143,7 @@
 			{#if (params?.use_mlock ?? null) !== null}
 				<div class="flex justify-between items-center mt-1">
 					<div class="text-xs text-gray-500">
-						{params.use_mlock ? 'Enabled' : 'Disabled'}
+						{params.use_mlock ? $i18n.t('Enabled') : $i18n.t('Disabled')}
 					</div>
 
 					<div class=" pr-2">
@@ -1091,6 +1153,74 @@
 			{/if}
 		</div>
 	{/if}
+
+	<div class=" py-0.5 w-full justify-between">
+		<Tooltip
+			content={$i18n.t(
+				'This option enables or disables the use of the reasoning feature in Ollama, which allows the model to think before generating a response. When enabled, the model can take a moment to process the conversation context and generate a more thoughtful response.'
+			)}
+			placement="top-start"
+			className="inline-tooltip"
+		>
+			<div class=" py-0.5 flex w-full justify-between">
+				<div class=" self-center text-xs font-medium">
+					{'think'} ({$i18n.t('Ollama')})
+				</div>
+				<button
+					class="p-1 px-3 text-xs flex rounded-sm transition"
+					on:click={() => {
+						params.think = (params?.think ?? null) === null ? true : params.think ? false : null;
+					}}
+					type="button"
+				>
+					{#if params.think === true}
+						<span class="ml-2 self-center">{$i18n.t('On')}</span>
+					{:else if params.think === false}
+						<span class="ml-2 self-center">{$i18n.t('Off')}</span>
+					{:else}
+						<span class="ml-2 self-center">{$i18n.t('Default')}</span>
+					{/if}
+				</button>
+			</div>
+		</Tooltip>
+	</div>
+
+	<div class=" py-0.5 w-full justify-between">
+		<Tooltip
+			content={$i18n.t('The format to return a response in. Format can be json or a JSON schema.')}
+			placement="top-start"
+			className="inline-tooltip"
+		>
+			<div class=" py-0.5 flex w-full justify-between">
+				<div class=" self-center text-xs font-medium">
+					{'format'} ({$i18n.t('Ollama')})
+				</div>
+				<button
+					class="p-1 px-3 text-xs flex rounded-sm transition"
+					on:click={() => {
+						params.format = (params?.format ?? null) === null ? 'json' : null;
+					}}
+					type="button"
+				>
+					{#if (params?.format ?? null) === null}
+						<span class="ml-2 self-center">{$i18n.t('Default')}</span>
+					{:else}
+						<span class="ml-2 self-center">{$i18n.t('JSON')}</span>
+					{/if}
+				</button>
+			</div>
+		</Tooltip>
+
+		{#if (params?.format ?? null) !== null}
+			<div class="flex mt-0.5 space-x-2">
+				<Textarea
+					className="w-full  text-sm bg-transparent outline-hidden"
+					placeholder={$i18n.t('e.g. "json" or a JSON schema')}
+					bind:value={params.format}
+				/>
+			</div>
+		{/if}
+	</div>
 
 	<div class=" py-0.5 w-full justify-between">
 		<Tooltip
@@ -1364,6 +1494,46 @@
 							step="1"
 						/>
 					</div>
+				</div>
+			{/if}
+		</div>
+
+		<div class=" py-0.5 w-full justify-between">
+			<Tooltip
+				content={$i18n.t(
+					'This option controls how long the model will stay loaded into memory following the request (default: 5m)'
+				)}
+				placement="top-start"
+				className="inline-tooltip"
+			>
+				<div class=" py-0.5 flex w-full justify-between">
+					<div class=" self-center text-xs font-medium">
+						{'keep_alive'} ({$i18n.t('Ollama')})
+					</div>
+					<button
+						class="p-1 px-3 text-xs flex rounded-sm transition"
+						on:click={() => {
+							params.keep_alive = (params?.keep_alive ?? null) === null ? '5m' : null;
+						}}
+						type="button"
+					>
+						{#if (params?.keep_alive ?? null) === null}
+							<span class="ml-2 self-center">{$i18n.t('Default')}</span>
+						{:else}
+							<span class="ml-2 self-center">{$i18n.t('Custom')}</span>
+						{/if}
+					</button>
+				</div>
+			</Tooltip>
+
+			{#if (params?.keep_alive ?? null) !== null}
+				<div class="flex mt-0.5 space-x-2">
+					<input
+						class="w-full text-sm bg-transparent outline-hidden"
+						type="text"
+						placeholder={$i18n.t("e.g. '30s','10m'. Valid time units are 's', 'm', 'h'.")}
+						bind:value={params.keep_alive}
+					/>
 				</div>
 			{/if}
 		</div>

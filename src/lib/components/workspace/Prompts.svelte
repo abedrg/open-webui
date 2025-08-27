@@ -22,7 +22,7 @@
 	import ChevronRight from '../icons/ChevronRight.svelte';
 	import Spinner from '../common/Spinner.svelte';
 	import Tooltip from '../common/Tooltip.svelte';
-	import { capitalizeFirstLetter } from '$lib/utils';
+	import { capitalizeFirstLetter, slugify } from '$lib/utils';
 	import XMark from '../icons/XMark.svelte';
 
 	const i18n = getContext('i18n');
@@ -68,7 +68,15 @@
 	};
 
 	const cloneHandler = async (prompt) => {
-		sessionStorage.prompt = JSON.stringify(prompt);
+		const clonedPrompt = { ...prompt };
+
+		clonedPrompt.title = `${clonedPrompt.title} (Clone)`;
+		const baseCommand = clonedPrompt.command.startsWith('/')
+			? clonedPrompt.command.substring(1)
+			: clonedPrompt.command;
+		clonedPrompt.command = slugify(`${baseCommand} clone`);
+
+		sessionStorage.prompt = JSON.stringify(clonedPrompt);
 		goto('/workspace/prompts/create');
 	};
 
@@ -165,7 +173,7 @@
 	<div class="mb-5 gap-2 grid lg:grid-cols-2 xl:grid-cols-3">
 		{#each filteredItems as prompt}
 			<div
-				class=" flex space-x-4 cursor-pointer w-full px-3 py-2 dark:hover:bg-white/5 hover:bg-black/5 rounded-xl transition"
+				class=" flex space-x-4 cursor-pointer w-full px-4 py-3 border border-gray-50 dark:border-gray-850 dark:hover:bg-white/5 hover:bg-black/5 rounded-2xl transition"
 			>
 				<div class=" flex flex-1 space-x-4 cursor-pointer w-full">
 					<a href={`/workspace/prompts/edit?command=${encodeURIComponent(prompt.command)}`}>
@@ -350,7 +358,7 @@
 
 			<a
 				class=" flex cursor-pointer items-center justify-between hover:bg-gray-50 dark:hover:bg-gray-850 w-full mb-2 px-3.5 py-1.5 rounded-xl transition"
-				href="https://openwebui.com/#open-webui-community"
+				href="https://openwebui.com/prompts"
 				target="_blank"
 			>
 				<div class=" self-center">
@@ -370,6 +378,6 @@
 	{/if}
 {:else}
 	<div class="w-full h-full flex justify-center items-center">
-		<Spinner />
+		<Spinner className="size-5" />
 	</div>
 {/if}
