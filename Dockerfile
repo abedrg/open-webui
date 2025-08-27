@@ -158,6 +158,19 @@ COPY --chown=$UID:$GID --from=build /app/package.json /app/package.json
 # copy backend files
 COPY --chown=$UID:$GID ./backend .
 
+# --- Azure App Service persistence (ensure data survives restarts) ---
+# Create a persistent data directory under /home and symlink the app's default data path to it.
+# Azure App Service persists only /home when WEBSITES_ENABLE_APP_SERVICE_STORAGE=true
+RUN mkdir -p /home/openwebui \
+    && chown -R ${UID:-0}:${GID:-0} /home/openwebui \
+    && rm -rf /app/backend/data \
+    && ln -s /home/openwebui /app/backend/data \
+    && mkdir -p /home/openwebui/cache/embedding/models /home/openwebui/cache/tiktoken /home/openwebui/cache/whisper/models
+
+# Optional: advertise the data dir for tooling/scripts
+ENV OPENWEBUI_DATA_DIR=/home/openwebui
+# --------------------------------------------------------------------
+
 EXPOSE 8080
 
 HEALTHCHECK CMD curl --silent --fail http://localhost:${PORT:-8080}/health | jq -ne 'input.status == true' || exit 1
